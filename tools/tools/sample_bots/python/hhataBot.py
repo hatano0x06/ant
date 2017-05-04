@@ -47,23 +47,6 @@ class HHataBot:
         getLogger().debug("Done Finding Unseen")            
         if closest_unseen!=None:
             return self.do_order(ants, UNSEEN, (a_row,a_col), closest_unseen, destinations, hunted, orders)
-
-    def left_move(self,ants,a_row,a_col,destinations,hunted,orders):
-    	if a_row % 2 == 0:
-    		if a_col % 2 == 0:
-    			direction = 'n'
-    		else:
-    			direction = 's'
-    		else:
-    			if a_col % 2 == 0:
-    				direction = 'e'
-    			else:
-    				direction = 'w'
-            getLogger().debug("random move:direction:%s",direction)
-            (n_row, n_col) = ants.destination(a_row, a_col, direction)
-            if (not (n_row, n_col) in destinations and
-                    ants.unoccupied(n_row, n_col)):
-                return self.do_order(ants, LEFT, (a_row,a_col), (n_row, n_col), destinations, hunted, orders)
     
     def random_move(self,ants,a_row,a_col,destinations,hunted,orders):
         #if we didn't move as there was no food try a random move
@@ -79,7 +62,7 @@ class HHataBot:
                 return self.do_order(ants, LAND, (a_row,a_col), (n_row, n_col), destinations, hunted, orders)
         
     def do_order(self, ants, order_type, loc, dest, destinations, hunted, orders):
-        order_type_desc = ["hill", "unseen", None, "food", "random", None, "left"]
+        order_type_desc = ["hill", "unseen", None, "food", "random", None]
         a_row, a_col = loc
         getLogger().debug("chasing %s:start" % order_type_desc)
         directions = ants.direction(a_row,a_col,dest[0],dest[1])
@@ -110,7 +93,7 @@ class HHataBot:
             ant_loc, step_loc, dest_loc, order_type = order
             if ((order_type == HILL and dest_loc in ants.enemy_hills()) or
                     (order_type == FOOD and dest_loc in ants.food()) or
-                    (order_type == LEFT) or
+                    (order_type == ANTS and dest_loc in ants.enemy_ants()) or
                     (order_type == UNSEEN and ants.map[dest_loc[0]][dest_loc[1]] == UNSEEN)):
                 self.do_order(ants, order_type, ant_loc, dest_loc, destinations, hunted, orders)
                 
@@ -120,10 +103,9 @@ class HHataBot:
                 if not self.hunt_hills(ants, a_row, a_col, destinations, hunted, orders):
                     if not self.hunt_food(ants, a_row, a_col, destinations, hunted, orders):
                         if not self.hunt_unseen(ants, a_row, a_col, destinations, hunted, orders):
-	                        if not self.left_move(ants, a_row, a_col, destinations, hunted, orders):
-   	                        	if not self.random_move(ants, a_row, a_col, destinations, hunted, orders):
-                                	getLogger().debug("blocked:can't move:%d,%d",a_row,a_col)
-                                	destinations.append((a_row,a_col))
+                            if not self.random_move(ants, a_row, a_col, destinations, hunted, orders):
+                                getLogger().debug("blocked:can't move:%d,%d",a_row,a_col)
+                                destinations.append((a_row,a_col))
         self.standing_orders = orders
         for order in self.standing_orders:
             # move ant location to step destination
