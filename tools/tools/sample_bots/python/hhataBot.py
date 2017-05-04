@@ -40,6 +40,7 @@ class HHataBot:
     def hunt_food(self,ants,a_row,a_col,destinations,hunted,orders):
         getLogger().debug("Start Finding Food")
         closest_food = ants.closest_food(a_row,a_col,hunted)
+        #closest_food = ants.closest_food(a_row,a_col)
         getLogger().debug("Done Finding Food")            
         if closest_food!=None:
             return self.do_order(ants, FOOD, (a_row,a_col), closest_food, destinations, hunted, orders)
@@ -47,6 +48,7 @@ class HHataBot:
     def hunt_unseen(self,ants,a_row,a_col,destinations,hunted,orders):
         getLogger().debug("Start Finding Unseen")
         closest_unseen = ants.closest_unseen(a_row,a_col,hunted)
+        #closest_unseen = ants.closest_unseen(a_row,a_col)
         getLogger().debug("Done Finding Unseen")            
         if closest_unseen!=None:
             return self.do_order(ants, UNSEEN, (a_row,a_col), closest_unseen, destinations, hunted, orders)
@@ -65,19 +67,15 @@ class HHataBot:
                 return self.do_order(ants, LAND, (a_row,a_col), (n_row, n_col), destinations, hunted, orders)
         
     def do_order(self, ants, order_type, loc, dest, destinations, hunted, orders):
-        order_type_desc = ["ant", "hill", "unseen", None, "food", "random", None]
         a_row, a_col = loc
-        getLogger().debug("chasing %s:start" % order_type_desc)
         directions = ants.direction(a_row,a_col,dest[0],dest[1])
-        getLogger().debug("chasing %s:directions:%s" % (order_type_desc[order_type],"".join(directions)))
         shuffle(directions)
         for direction in directions:
-            getLogger().debug("chasing %s:direction:%s" % (order_type_desc[order_type],direction))
             (n_row,n_col) = ants.destination(a_row,a_col,direction)
             if (not (n_row,n_col) in destinations and
                 ants.unoccupied(n_row,n_col)):
                 ants.issue_order((a_row,a_col,direction))
-                getLogger().debug("issue_order:%s,%d,%d,%s","chasing %s" % order_type_desc[order_type],a_row,a_col,direction)                        
+
                 destinations.append((n_row,n_col))
                 hunted.append(dest)
                 orders.append([loc, (n_row,n_col), dest, order_type])
@@ -107,13 +105,17 @@ class HHataBot:
 
 
     def do_turn(self, ants):
+        global turn_number
+        turn_number = turn_number+1
+        orders = []
+        hunted = []
         destinations = []
         new_straight = {}
         new_lefty = {}
-        orders = []
-        hunted = []
 
-        ant_mode = ["hill", "hill", "hill", "unseen", "unseen", "food", "food", "food", "food", "food", ]
+
+#        ant_mode = ["hill", "hill", "hill", "unseen", "unseen", "food", "food", "food", "food", "food", ]
+        ant_mode = ["hill", "hill", "hill", "food", "food", "food", "food", "food", ]
 
         for a_row, a_col in ants.my_ants():
             # first ant
@@ -126,13 +128,14 @@ class HHataBot:
                 else:
                     self.orders_mode[(a_row, a_col)] = 3
 
-            if not self.do_first_order(ants, a_row, a_col, destinations, hunted, orders):
+            if not self.do_first_order(ants, a_row, a_col, destinations, hunted, orders) and (int)(turn_number/20) %2 == 0:
+            #if not self.do_first_order(ants, a_row, a_col, destinations, hunted, orders):
+            #if True:
                 # left hand
                 # send new ants in a straight line
                 if (not (a_row, a_col) in self.ants_straight and
                         not (a_row, a_col) in self.ants_lefty):
                     if a_row % 2 == 0:
-
                         if a_col % 2 == 0:
                             direction = 'n'
                         else:
@@ -194,9 +197,9 @@ class HHataBot:
                                 destinations.append((a_row, a_col))
                                 break
 
-                # reset lists
-                self.ants_straight = new_straight
-                self.ants_lefty = new_lefty
+        # reset lists
+        self.ants_straight = new_straight
+        self.ants_lefty = new_lefty
 
 if __name__ == '__main__':
     try:
