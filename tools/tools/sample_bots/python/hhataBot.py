@@ -28,6 +28,7 @@ class HHataBot:
         self.standing_orders = []
         self.ants_straight = {}
         self.ants_lefty = {}
+        self.orders_mode = {} # 1:hill 2:food 3:unseen
 
     def hunt_hills(self,ants,a_row,a_col,destinations,hunted,orders):
         getLogger().debug("Start Finding Ant")
@@ -84,102 +85,101 @@ class HHataBot:
         return False
         
     def do_first_order(self,ants,a_row,a_col,destinations,hunted,orders):
-        if not self.hunt_hills(ants, a_row, a_col, destinations, hunted, orders):
-            if not self.hunt_food(ants, a_row, a_col, destinations, hunted, orders):
-                if not self.hunt_unseen(ants, a_row, a_col, destinations, hunted, orders):
-                    return False
+    	order = self.orders_mode[(a_row, a_col)]
+
+    	if order == 1:
+	        if not self.hunt_hills(ants, a_row, a_col, destinations, hunted, orders):
+	        	return False
+
+    	if order == 2:
+	        if not self.hunt_food(ants, a_row, a_col, destinations, hunted, orders):
+	        	return False
+
+    	if order == 3:
+	        if not self.hunt_unseen(ants, a_row, a_col, destinations, hunted, orders):
+	        	return False
+
         return True
 
-    def do_leftwalk(self,ants,a_row,a_col,destinations,hunted,orders):
+
+    def do_turn(self, ants):
+        destinations = []
         new_straight = {}
         new_lefty = {}
 
-        if (not (a_row, a_col) in self.ants_straight and
-                not (a_row, a_col) in self.ants_lefty):
-            if a_row % 2 == 0:
-                if a_col % 2 == 0:
-                    direction = 'n'
-                else:
-                    direction = 's'
-            else:
-                if a_col % 2 == 0:
-                    direction = 'e'
-                else:
-                    direction = 'w'
+        ant_mode = ["hill", "hill", "hill", "unseen", "unseen", "food", "food", "food", "food", "food", ]
 
-        # send ants going in a straight line in the same direction
-        if (a_row, a_col) in self.ants_straight:
-            direction = self.ants_straight[(a_row, a_col)]
-            n_row, n_col = ants.destination(a_row, a_col, direction)
-            if ants.passable(n_row, n_col):
-                if (ants.unoccupied(n_row, n_col) and
-                        not (n_row, n_col) in destinations):
-                    ants.issue_order((a_row, a_col, direction))
-                    new_straight[(n_row, n_col)] = direction
-                    destinations.append((n_row, n_col))
+        for a_row, a_col in ants.my_ants():
+            # first ant
+            if (not (a_row, a_col) in self.orders_mode ):
+                shuffle(ant_mode)
+                if ant_mode[0] == "hill":
+                    self.orders_mode[(a_row, a_col)] = 1
+                elif ant_mode[0] == "food":
+                    self.orders_mode[(a_row, a_col)] = 2
                 else:
-                    # pause ant, turn and try again next turn
-                    new_straight[(a_row, a_col)] = LEFT[direction]
-                    destinations.append((a_row, a_col))
-            else:
-                # hit a wall, start following it
-                self.ants_lefty[(a_row, a_col)] = RIGHT[direction]
+                    self.orders_mode[(a_row, a_col)] = 3
 
-        # send ants following a wall, keeping it on their left
-        if (a_row, a_col) in self.ants_lefty:
-            direction = self.ants_lefty[(a_row, a_col)]
-            directions = [LEFT[direction], direction, RIGHT[direction], BEHIND[direction]]
-            # try 4 directions in order, attempting to turn left at corners
-            for new_direction in directions:
-                n_row, n_col = ants.destination(a_row, a_col, new_direction)
+            # left hand
+            # send new ants in a straight line
+            if (not (a_row, a_col) in self.ants_straight and
+                    not (a_row, a_col) in self.ants_lefty):
+                if a_row % 2 == 0:
+
+                    if a_col % 2 == 0:
+                        direction = 'n'
+                    else:
+                        direction = 's'
+                else:
+                    if a_col % 2 == 0:
+                        direction = 'e'
+                    else:
+                        direction = 'w'
+                self.ants_straight[(a_row, a_col)] = direction
+
+            # send ants going in a straight line in the same direction
+            if (a_row, a_col) in self.ants_straight:
+                direction = self.ants_straight[(a_row, a_col)]
+                n_row, n_col = ants.destination(a_row, a_col, direction)
                 if ants.passable(n_row, n_col):
                     if (ants.unoccupied(n_row, n_col) and
                             not (n_row, n_col) in destinations):
-                        ants.issue_order((a_row, a_col, new_direction))
-                        new_lefty[(n_row, n_col)] = new_direction
+                        ants.issue_order((a_row, a_col, direction))
+                        new_straight[(n_row, n_col)] = direction
                         destinations.append((n_row, n_col))
-                        break
                     else:
-                        # have ant wait until it is clear
-                        new_straight[(a_row, a_col)] = RIGHT[direction]
+                        # pause ant, turn and try again next turn
+                        new_straight[(a_row, a_col)] = LEFT[direction]
                         destinations.append((a_row, a_col))
-                        break
+                else:
+                    # hit a wall, start following it
+                    self.ants_lefty[(a_row, a_col)] = RIGHT[direction]
+
+            # send ants following a wall, keeping it on their left
+            if (a_row, a_col) in self.ants_lefty:
+                direction = self.ants_lefty[(a_row, a_col)]
+                directions = [LEFT[direction], direction, RIGHT[direction], BEHIND[direction]]
+                # try 4 directions in order, attempting to turn left at corners
+                for new_direction in directions:
+                    n_row, n_col = ants.destination(a_row, a_col, new_direction)
+                    if ants.passable(n_row, n_col):
+                        if (ants.unoccupied(n_row, n_col) and
+                                not (n_row, n_col) in destinations):
+                            ants.issue_order((a_row, a_col, new_direction))
+                            new_lefty[(n_row, n_col)] = new_direction
+                            destinations.append((n_row, n_col))
+                            break
+                        else:
+                            # have ant wait until it is clear
+                            new_straight[(a_row, a_col)] = RIGHT[direction]
+                            destinations.append((a_row, a_col))
+                            break
 
         # reset lists
         self.ants_straight = new_straight
         self.ants_lefty = new_lefty
-        return False;
 
-    def do_turn(self, ants):
-        global turn_number
-        turn_number = turn_number+1
-        destinations = []
-        getLogger().debug("Starting Turn")
-        # continue standing orders
-        orders = []
-        hunted = []
-        '''
-        for order in self.standing_orders:
-            ant_loc, step_loc, dest_loc, order_type = order
-            if ((order_type == HILL and dest_loc in ants.enemy_hills()) or
-                    (order_type == FOOD and dest_loc in ants.food()) or
-                    (order_type == ANTS and dest_loc in ants.enemy_ants()) or
-                    (order_type == UNSEEN and ants.map[dest_loc[0]][dest_loc[1]] == UNSEEN)):
-                self.do_order(ants, order_type, ant_loc, dest_loc, destinations, hunted, orders)
-        '''
-             
-        origins = [order[0] for order in orders]
-        for a_row, a_col in ants.my_ants():
-            if (a_row, a_col) not in origins:
-                if not self.do_first_order(ants, a_row, a_col, destinations, hunted, orders):
-                    if not self.do_leftwalk(ants, a_row, a_col, destinations, hunted, orders):
-                        if not self.random_move(ants, a_row, a_col, destinations, hunted, orders):
-                            getLogger().debug("blocked:can't move:%d,%d",a_row,a_col)
-                            destinations.append((a_row,a_col))
-        self.standing_orders = orders
-        for order in self.standing_orders:
-            # move ant location to step destination
-            order[0] = order[1]
+
                     
 if __name__ == '__main__':
     try:
