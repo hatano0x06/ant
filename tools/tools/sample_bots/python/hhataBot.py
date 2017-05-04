@@ -62,7 +62,7 @@ class HHataBot:
                 return self.do_order(ants, LAND, (a_row,a_col), (n_row, n_col), destinations, hunted, orders)
         
     def do_order(self, ants, order_type, loc, dest, destinations, hunted, orders):
-        order_type_desc = ["hill", "unseen", None, "food", "random", None]
+        order_type_desc = ["ant", "hill", "unseen", None, "food", "random", None]
         a_row, a_col = loc
         getLogger().debug("chasing %s:start" % order_type_desc)
         directions = ants.direction(a_row,a_col,dest[0],dest[1])
@@ -80,6 +80,17 @@ class HHataBot:
                 orders.append([loc, (n_row,n_col), dest, order_type])
                 return True
         return False
+        
+    def do_first_order(self,ants,a_row,a_col,destinations,hunted,orders):
+        if not self.hunt_hills(ants, a_row, a_col, destinations, hunted, orders):
+            if not self.hunt_food(ants, a_row, a_col, destinations, hunted, orders):
+                if not self.hunt_ants(ants, a_row, a_col, destinations, hunted, orders):
+                    if not self.hunt_unseen(ants, a_row, a_col, destinations, hunted, orders):
+                        return False
+        return True
+
+    def do_leftwalk(self,ants,a_row,a_col,destinations,hunted,orders):
+         return False;
         
     def do_turn(self, ants):
         global turn_number
