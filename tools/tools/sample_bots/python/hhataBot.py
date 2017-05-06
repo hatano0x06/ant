@@ -32,25 +32,27 @@ class HHataBot:
 
     def hunt_hills(self,ants,a_row,a_col,destinations,hunted,orders):
         getLogger().debug("Start Finding Ant")
-        closest_enemy_hill = ants.closest_enemy_hill(a_row,a_col)
+        closest_enemy_hill = ants.closest_enemy_hill(a_row,a_col,hunted)
+        #closest_enemy_hill = ants.closest_enemy_hill(a_row,a_col)
         getLogger().debug("Done Finding Ant")            
-        if closest_enemy_hill!=None:
+        if (not (closest_enemy_hill[0],closest_enemy_hill[1]) in destinations):
             return self.do_order(ants, HILL, (a_row,a_col), closest_enemy_hill, destinations, hunted, orders)
-            
+
     def hunt_food(self,ants,a_row,a_col,destinations,hunted,orders):
         getLogger().debug("Start Finding Food")
         closest_food = ants.closest_food(a_row,a_col,hunted)
         #closest_food = ants.closest_food(a_row,a_col)
         getLogger().debug("Done Finding Food")            
-        if closest_food!=None:
+        if (not (closest_food[0],closest_food[1]) in destinations):
             return self.do_order(ants, FOOD, (a_row,a_col), closest_food, destinations, hunted, orders)
 
     def hunt_unseen(self,ants,a_row,a_col,destinations,hunted,orders):
         getLogger().debug("Start Finding Unseen")
         closest_unseen = ants.closest_unseen(a_row,a_col,hunted)
         #closest_unseen = ants.closest_unseen(a_row,a_col)
-        getLogger().debug("Done Finding Unseen")            
-        if closest_unseen!=None:
+        getLogger().debug("Done Finding Unseen")
+        #if (not (n_row, n_col) in destinations and closest_unseen!=None):
+        if (not (closest_unseen[0],closest_unseen[1]) in destinations):
             return self.do_order(ants, UNSEEN, (a_row,a_col), closest_unseen, destinations, hunted, orders)
     
     def random_move(self,ants,a_row,a_col,destinations,hunted,orders):
@@ -88,6 +90,11 @@ class HHataBot:
         return False
         
     def do_first_order(self,ants,a_row,a_col,destinations,hunted,orders):
+        if not self.hunt_food(ants, a_row, a_col, destinations, hunted, orders):
+            return False
+        return True
+
+
         order = self.orders_mode[(a_row, a_col)]
 
         if order == 1:
@@ -128,7 +135,7 @@ class HHataBot:
                 else:
                     self.orders_mode[(a_row, a_col)] = 3
 
-            if not self.do_first_order(ants, a_row, a_col, destinations, hunted, orders) and (int)(turn_number/20) %2 == 0:
+            if not self.do_first_order(ants, a_row, a_col, destinations, hunted, orders) and (int)(turn_number/5) %2 == 0:
             #if not self.do_first_order(ants, a_row, a_col, destinations, hunted, orders):
             #if True:
                 # left hand
